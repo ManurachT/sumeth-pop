@@ -547,6 +547,13 @@ function showMilestone(msg) {
 }
 
 function doClick(e) {
+  // Client-side rate limit: max 20 clicks/sec
+  const now = Date.now();
+  if (!window._clickTimes) window._clickTimes = [];
+  window._clickTimes.push(now);
+  window._clickTimes = window._clickTimes.filter(t => t > now - 1000);
+  if (window._clickTimes.length > 20) return;
+
   count++;
   sessionPops++;
 
