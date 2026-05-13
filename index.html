@@ -84,7 +84,7 @@
       flex-direction: column;
       align-items: center;
       gap: 4px;
-      width: 340px;
+      width: min(340px, 90vw);
     }
     #rankLabel {
       font-size: 1rem;
@@ -126,8 +126,8 @@
     /* Photo face */
     #catImg {
       display: block;
-      width: 280px;
-      height: 280px;
+      width: min(280px, 80vw);
+      height: min(280px, 80vw);
       object-fit: cover;
       border-radius: 50%;
       border: 4px solid rgba(255,215,0,0.4);
@@ -230,6 +230,29 @@
     #resetBtn:hover {
       background: rgba(231,76,60,0.4);
       transform: scale(1.05);
+    }
+
+    /* ─── RESPONSIVE ─────────────────────────────────────── */
+    @media (max-width: 480px) {
+      h1 { font-size: 1.8rem; letter-spacing: 1px; }
+      #counter { font-size: 3rem; min-width: 140px; }
+      #pps { font-size: 0.85rem; padding: 4px 10px; }
+      #rankWrap { width: 90vw; }
+      #catImg { width: min(72vw, 280px); height: min(72vw, 280px); }
+      #clickLabel { font-size: 0.95rem; letter-spacing: 1px; }
+      #stats { flex-wrap: wrap; justify-content: center; gap: 10px; }
+      .stat-badge { padding: 6px 12px; font-size: 13px; }
+      #milestoneMsg { font-size: 1.1rem; padding: 10px 22px; white-space: normal; text-align: center; max-width: 90vw; }
+    }
+    @media (max-width: 360px) {
+      h1 { font-size: 1.5rem; }
+      #counter { font-size: 2.4rem; }
+      #catImg { width: 80vw; height: 80vw; }
+    }
+    @media (min-width: 481px) and (max-width: 768px) {
+      h1 { font-size: 2.2rem; }
+      #counter { font-size: 3.8rem; }
+      #catImg { width: 240px; height: 240px; }
     }
   </style>
 </head>
