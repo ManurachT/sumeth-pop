@@ -65,7 +65,7 @@
       transition: transform 0.07s;
       line-height: 1;
     }
-    #counter.pop { transform: scale(1.18); color: #FFD700; }
+    #counter.pop { transform: scale(1.28); color: #FFD700; text-shadow: 0 0 30px rgba(255,215,0,0.8); }
 
     /* PPS badge */
     #pps {
@@ -136,10 +136,24 @@
       transition: transform 0.08s ease, box-shadow 0.08s ease;
     }
     #catImg.popped {
-      transform: scale(1.07);
-      box-shadow: 0 0 32px 8px rgba(255,215,0,0.55);
+      transform: scale(1.14);
+      box-shadow: 0 0 55px 18px rgba(255,215,0,0.75), 0 0 20px 4px rgba(255,100,50,0.5);
     }
-    #catImg:active { transform: scale(0.95); }
+    #catImg:active { transform: scale(0.93); }
+
+    /* Ripple on pop */
+    .ripple {
+      position: fixed;
+      border-radius: 50%;
+      border: 4px solid rgba(255,215,0,0.8);
+      pointer-events: none;
+      z-index: 49;
+      animation: rippleOut 0.55s ease-out forwards;
+    }
+    @keyframes rippleOut {
+      0%   { opacity: 0.85; transform: scale(0.3); }
+      100% { opacity: 0;    transform: scale(2.4); }
+    }
 
     /* Click label */
     #clickLabel {
@@ -184,17 +198,18 @@
     /* Pop numbers flying up */
     .pop-num {
       position: fixed;
-      font-size: 1.6rem;
+      font-size: 2.2rem;
       font-weight: 900;
       color: #FFD700;
       pointer-events: none;
       z-index: 50;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.4);
-      animation: floatUp 0.9s ease-out forwards;
+      text-shadow: 0 3px 12px rgba(0,0,0,0.55), 0 0 20px rgba(255,200,0,0.6);
+      animation: floatUp 0.75s cubic-bezier(0.22,1,0.36,1) forwards;
     }
     @keyframes floatUp {
-      0%   { opacity: 1; transform: translateY(0) scale(1); }
-      100% { opacity: 0; transform: translateY(-90px) scale(1.4); }
+      0%   { opacity: 1;   transform: translateY(0)     scale(1.2); }
+      40%  { opacity: 1;   transform: translateY(-40px) scale(1);   }
+      100% { opacity: 0;   transform: translateY(-100px) scale(0.8); }
     }
 
     /* Stats bar */
@@ -521,6 +536,17 @@ function updateUI() {
   popLevel = Math.min(4, idx);
 }
 
+function spawnRipple(x, y, size) {
+  const el = document.createElement('div');
+  el.className = 'ripple';
+  el.style.left   = (x - size/2) + 'px';
+  el.style.top    = (y - size/2) + 'px';
+  el.style.width  = size + 'px';
+  el.style.height = size + 'px';
+  document.body.appendChild(el);
+  el.addEventListener('animationend', () => el.remove());
+}
+
 function spawnPopNum(x, y) {
   const el = document.createElement('div');
   el.className = 'pop-num';
@@ -569,7 +595,8 @@ function doClick(e) {
   const rect = catImg.getBoundingClientRect();
   const cx   = e ? (e.touches ? e.touches[0].clientX : e.clientX) : rect.left + rect.width / 2;
   const cy   = e ? (e.touches ? e.touches[0].clientY : e.clientY) : rect.top  + rect.height / 2;
-  spawnPopNum(cx - 12, cy - 20);
+  spawnPopNum(cx - 16, cy - 30);
+  spawnRipple(rect.left + rect.width/2, rect.top + rect.height/2, rect.width);
 }
 
 catImg.addEventListener('click',      doClick);
