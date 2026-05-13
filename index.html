@@ -558,7 +558,6 @@ function doClick(e) {
   sessionPops++;
 
   // Streak
-  const now = Date.now();
   if (now - lastClick < 800) { streak++; } else { streak = 1; }
   lastClick = now;
 
