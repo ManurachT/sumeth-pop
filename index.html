@@ -32,9 +32,21 @@
       position: relative;
       z-index: 1;
       display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 32px;
+      width: 100%;
+      max-width: 1000px;
+      padding: 20px 16px;
+    }
+
+    #gameCol {
+      display: flex;
       flex-direction: column;
       align-items: center;
       gap: 18px;
+      flex: 0 0 auto;
     }
 
     h1 {
@@ -258,6 +270,8 @@
       #stats { flex-wrap: wrap; justify-content: center; gap: 10px; }
       .stat-badge { padding: 6px 12px; font-size: 13px; }
       #milestoneMsg { font-size: 1.1rem; padding: 10px 22px; white-space: normal; text-align: center; max-width: 90vw; }
+      .container { flex-direction: column; align-items: center; }
+      #leaderboard { width: 92vw; position: static; }
     }
     @media (max-width: 360px) {
       h1 { font-size: 1.5rem; }
@@ -268,6 +282,8 @@
       h1 { font-size: 2.2rem; }
       #counter { font-size: 3.8rem; }
       #catImg { width: 240px; height: 240px; }
+      .container { flex-direction: column; align-items: center; }
+      #leaderboard { width: min(420px, 92vw); position: static; }
     }
 
     /* ─── USERNAME MODAL ──────────────────────────────────── */
@@ -308,12 +324,15 @@
 
     /* ─── LEADERBOARD ─────────────────────────────────────── */
     #leaderboard {
-      width: min(360px, 92vw);
+      width: min(320px, 90vw);
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.12);
       border-radius: 16px;
       padding: 14px 18px;
-      margin-top: 4px;
+      flex: 0 0 auto;
+      align-self: flex-start;
+      position: sticky;
+      top: 20px;
     }
     #leaderboard h3 {
       color: #FFD700; font-size: 1rem; letter-spacing: 1px;
@@ -355,7 +374,8 @@
 </div>
 
 <div class="container">
-  <h1>� SUMETH POP!</h1>
+  <div id="gameCol">
+    <h1>🐱 SUMETH POP!</h1>
 
   <div id="counterWrap">
     <div id="counter">0</div>
@@ -386,7 +406,8 @@
     </div>
   </div>
 
-  <button id="resetBtn" onclick="resetGame()">🔄 Reset</button>
+    <button id="resetBtn" onclick="resetGame()">🔄 Reset</button>
+  </div>
 
   <!-- Leaderboard -->
   <div id="leaderboard">
