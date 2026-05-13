@@ -1,744 +1,752 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sumeth Popcat!</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sumeth Pop!</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{
+      background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+      min-height:100vh; font-family:'Arial Rounded MT Bold',Arial,sans-serif;
+      color:white; user-select:none; overflow-x:hidden;
+    }
+    #bg-canvas{position:fixed;inset:0;pointer-events:none;z-index:0;}
 
-    body {
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
-      overflow: hidden;
-      cursor: pointer;
-      user-select: none;
+    /* ── SCREENS ─────────────────────────────── */
+    .screen{
+      position:relative;z-index:1;
+      min-height:100vh; display:none;
+      flex-direction:column; align-items:center; justify-content:center;
+      padding:24px 16px; gap:20px;
+    }
+    .screen.active{display:flex;}
+
+    /* ── CARDS ───────────────────────────────── */
+    .card{
+      background:rgba(255,255,255,0.07);
+      border:1px solid rgba(255,255,255,0.15);
+      border-radius:20px; padding:28px 28px;
+      width:min(420px,94vw);
+    }
+    .card h2{color:#FFD700;font-size:1.5rem;margin-bottom:14px;text-align:center;}
+
+    /* ── INPUTS / BUTTONS ────────────────────── */
+    input[type=text],select{
+      width:100%; padding:11px 14px; border-radius:12px;
+      border:2px solid rgba(255,215,0,0.3);
+      background:rgba(255,255,255,0.07); color:white;
+      font-size:1rem; outline:none; margin-top:6px;
+    }
+    input[type=text]:focus,select:focus{border-color:#FFD700;}
+    select option{background:#16213e;color:white;}
+    label{font-size:0.85rem;color:rgba(255,255,255,0.6);display:block;margin-top:10px;}
+
+    .btn{
+      width:100%; padding:12px; border-radius:12px; border:none;
+      font-size:1rem; font-weight:900; cursor:pointer; margin-top:12px;
+      transition:transform .15s,box-shadow .15s;
+    }
+    .btn:hover{transform:scale(1.03);}
+    .btn-gold{background:linear-gradient(90deg,#FFD700,#FF8C00);color:#1a1a2e;}
+    .btn-gold:hover{box-shadow:0 6px 20px rgba(255,215,0,0.4);}
+    .btn-ghost{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:white;}
+
+    /* ── TITLE ───────────────────────────────── */
+    h1{
+      font-size:2.6rem;color:#FFD700;letter-spacing:3px;
+      text-shadow:0 0 20px rgba(255,215,0,0.6),3px 3px 0 #c8950a;
+      animation:titlePulse 2s ease-in-out infinite;
+    }
+    @keyframes titlePulse{0%,100%{transform:scale(1);}50%{transform:scale(1.03);}}
+
+    /* ── ROOM LIST ───────────────────────────── */
+    #roomList{display:flex;flex-direction:column;gap:10px;width:min(560px,94vw);}
+    .room-item{
+      display:flex;align-items:center;gap:14px;
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:14px; padding:14px 18px; cursor:pointer;
+      transition:background .2s,transform .1s;
+    }
+    .room-item:hover{background:rgba(255,255,255,0.12);transform:translateX(4px);}
+    .room-item .room-icon{font-size:1.8rem;}
+    .room-item .room-info{flex:1;}
+    .room-item .room-name{font-size:1rem;font-weight:bold;}
+    .room-item .room-meta{font-size:.78rem;color:rgba(255,255,255,0.5);margin-top:2px;}
+    .room-item .room-status{
+      font-size:.78rem;font-weight:bold;padding:4px 10px;
+      border-radius:20px;white-space:nowrap;
+    }
+    .status-waiting{background:rgba(46,204,113,0.2);color:#2ecc71;border:1px solid rgba(46,204,113,0.4);}
+    .status-playing{background:rgba(231,76,60,0.2);color:#e74c3c;border:1px solid rgba(231,76,60,0.4);}
+    .status-finished{background:rgba(149,165,166,0.2);color:#95a5a6;border:1px solid rgba(149,165,166,0.4);}
+    #noRooms{color:rgba(255,255,255,0.4);font-size:.9rem;text-align:center;padding:30px 0;}
+
+    /* ── WAITING ROOM ────────────────────────── */
+    #waitingRoomBox{width:min(520px,94vw);}
+    #waitPlayerList{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;margin-top:10px;}
+    .wait-player{
+      display:flex;align-items:center;gap:10px;
+      background:rgba(255,255,255,0.06);border-radius:10px;padding:9px 14px;font-size:.9rem;
+    }
+    .wait-player .host-badge{
+      font-size:.7rem;background:#FFD700;color:#1a1a2e;
+      padding:2px 7px;border-radius:10px;font-weight:bold;
+    }
+    #roomCodeDisplay{
+      text-align:center;background:rgba(255,215,0,0.1);
+      border:1px dashed rgba(255,215,0,0.4);border-radius:12px;
+      padding:12px;margin-bottom:14px;
+    }
+    #roomCodeDisplay strong{font-size:1.6rem;color:#FFD700;letter-spacing:4px;}
+
+    /* ── GAME SCREEN ─────────────────────────── */
+    #gameScreen{
+      flex-direction:row;align-items:flex-start;
+      justify-content:center; gap:28px; flex-wrap:wrap;
+      padding-top:20px; padding-bottom:20px;
+    }
+    #gameCol{
+      display:flex;flex-direction:column;align-items:center;
+      gap:14px;flex:0 0 auto;
     }
 
-    /* Background particles */
-    #bg-canvas {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 0;
+    /* Timer */
+    #timerBox{
+      display:flex;flex-direction:column;align-items:center;
+      background:rgba(0,0,0,0.3);border-radius:16px;padding:12px 28px;
+      border:2px solid rgba(255,215,0,0.3);min-width:140px;
     }
-
-    .container {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      min-height: 100vh;
-      padding: 20px 16px;
-    }
-
-    #gameCol {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 18px;
-      flex: 0 0 auto;
-    }
-
-    /* Leaderboard fixed right */
-    #leaderboard {
-      position: fixed;
-      right: 20px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 280px;
-      z-index: 10;
-    }
-
-    h1 {
-      font-size: 2.8rem;
-      color: #FFD700;
-      text-shadow: 0 0 20px rgba(255,215,0,0.6), 3px 3px 0 #c8950a;
-      letter-spacing: 3px;
-      animation: titlePulse 2s ease-in-out infinite;
-    }
-    @keyframes titlePulse {
-      0%,100% { transform: scale(1); }
-      50% { transform: scale(1.03); }
-    }
+    #timerLabel{font-size:.75rem;color:rgba(255,255,255,0.5);letter-spacing:2px;}
+    #timerValue{font-size:3.2rem;font-weight:900;color:#FFD700;line-height:1;}
+    #timerValue.urgent{color:#e74c3c;animation:urgentPulse .5s ease-in-out infinite;}
+    @keyframes urgentPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.12);}}
 
     /* Counter */
-    #counterWrap {
-      display: flex;
-      align-items: center;
-      gap: 14px;
+    #counter{
+      font-size:4.2rem;font-weight:900;color:#fff;
+      min-width:180px;text-align:center;
+      text-shadow:0 0 30px rgba(255,255,255,0.3);
+      transition:transform .07s; line-height:1;
     }
-    #counter {
-      font-size: 4.5rem;
-      font-weight: 900;
-      color: #fff;
-      min-width: 200px;
-      text-align: center;
-      text-shadow: 0 0 30px rgba(255,255,255,0.3);
-      transition: transform 0.07s;
-      line-height: 1;
-    }
-    #counter.pop { transform: scale(1.28); color: #FFD700; text-shadow: 0 0 30px rgba(255,215,0,0.8); }
-
-    /* PPS badge */
-    #pps {
-      font-size: 1rem;
-      color: rgba(255,255,255,0.6);
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.15);
-      padding: 5px 14px;
-      border-radius: 20px;
-      letter-spacing: 1px;
+    #counter.pop{transform:scale(1.28);color:#FFD700;text-shadow:0 0 30px rgba(255,215,0,0.8);}
+    #pps{
+      font-size:.9rem;color:rgba(255,255,255,0.6);
+      background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);
+      padding:4px 12px;border-radius:20px;
     }
 
-    /* Rank bar */
-    #rankWrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      width: min(340px, 90vw);
+    /* Rank */
+    #rankWrap{display:flex;flex-direction:column;align-items:center;gap:4px;width:min(300px,80vw);}
+    #rankLabel{font-size:.9rem;color:rgba(255,255,255,0.75);}
+    #rankBar{width:100%;height:10px;background:rgba(255,255,255,0.1);border-radius:5px;overflow:hidden;}
+    #rankFill{height:100%;width:0%;background:linear-gradient(90deg,#FFD700,#FF6B6B);border-radius:5px;transition:width .3s;}
+
+    /* Cat image */
+    #catImg{
+      display:block;width:min(240px,68vw);height:min(240px,68vw);
+      object-fit:cover;border-radius:50%;
+      border:4px solid rgba(255,215,0,0.4);
+      cursor:pointer;transition:transform .08s ease,box-shadow .08s ease;
     }
-    #rankLabel {
-      font-size: 1rem;
-      color: rgba(255,255,255,0.75);
-      letter-spacing: 1px;
+    #catImg.popped{
+      transform:scale(1.14);
+      box-shadow:0 0 55px 18px rgba(255,215,0,0.75),0 0 20px 4px rgba(255,100,50,0.5);
     }
-    #rankBar {
-      width: 100%;
-      height: 12px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 6px;
-      overflow: hidden;
+    #catImg:active{transform:scale(0.93);}
+
+    /* Ripple */
+    .ripple{
+      position:fixed;border-radius:50%;
+      border:4px solid rgba(255,215,0,0.8);
+      pointer-events:none;z-index:49;
+      animation:rippleOut .55s ease-out forwards;
     }
-    #rankFill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #FFD700, #FF6B6B);
-      border-radius: 6px;
-      transition: width 0.3s ease;
+    @keyframes rippleOut{0%{opacity:.85;transform:scale(0.3);}100%{opacity:0;transform:scale(2.4);}}
+
+    #clickLabel{font-size:1rem;color:rgba(255,255,255,0.45);letter-spacing:2px;animation:blink 1.5s ease-in-out infinite;}
+    @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+    /* Pop float */
+    .pop-num{
+      position:fixed;font-size:2.2rem;font-weight:900;color:#FFD700;
+      pointer-events:none;z-index:50;
+      text-shadow:0 3px 12px rgba(0,0,0,.55),0 0 20px rgba(255,200,0,.6);
+      animation:floatUp .75s cubic-bezier(.22,1,.36,1) forwards;
+    }
+    @keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1.2);}40%{opacity:1;transform:translateY(-40px) scale(1);}100%{opacity:0;transform:translateY(-100px) scale(.8);}}
+
+    /* Game leaderboard right panel */
+    #gameLb{
+      position:sticky;top:20px;
+      width:260px;flex:0 0 auto;
+      background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:16px;padding:14px 16px;
+      align-self:flex-start;
+    }
+    #gameLb h3{color:#FFD700;font-size:.95rem;letter-spacing:1px;margin-bottom:10px;text-align:center;}
+    #gameLbList{list-style:none;display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;}
+    #gameLbList li{
+      display:flex;align-items:center;gap:8px;
+      background:rgba(255,255,255,0.06);border-radius:10px;padding:7px 10px;font-size:.85rem;
+    }
+    #gameLbList li.me{background:rgba(255,215,0,0.18);border:1px solid rgba(255,215,0,0.3);}
+    #gameLbList .lb-rank{font-size:1.1rem;width:24px;text-align:center;}
+    #gameLbList .lb-name{flex:1;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    #gameLbList .lb-score{color:#FFD700;font-weight:900;}
+
+    /* ── RESULTS ─────────────────────────────── */
+    #resultsBox{width:min(480px,94vw);text-align:center;}
+    #winnerName{font-size:1.8rem;color:#FFD700;font-weight:900;margin:10px 0;}
+    #resultsList{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:16px;}
+    #resultsList li{
+      display:flex;align-items:center;gap:10px;
+      background:rgba(255,255,255,0.06);border-radius:12px;padding:10px 16px;
+    }
+    #resultsList li.winner-row{background:rgba(255,215,0,0.2);border:1px solid rgba(255,215,0,0.4);}
+    #resultsList .r-rank{font-size:1.4rem;width:30px;text-align:center;}
+    #resultsList .r-name{flex:1;font-weight:bold;font-size:1rem;}
+    #resultsList .r-score{color:#FFD700;font-weight:900;font-size:1.1rem;}
+
+    /* ── MILESTONE ───────────────────────────── */
+    #milestoneMsg{
+      position:fixed;top:60px;left:50%;transform:translateX(-50%);
+      background:linear-gradient(90deg,#FFD700,#FF6B6B);
+      color:#1a1a2e;font-size:1.3rem;font-weight:900;
+      padding:10px 30px;border-radius:40px;
+      pointer-events:none;opacity:0;z-index:200;white-space:nowrap;
+    }
+    #milestoneMsg.show{animation:milAnim 2s ease forwards;}
+    @keyframes milAnim{
+      0%{opacity:0;transform:translateX(-50%) translateY(-20px) scale(.85);}
+      15%{opacity:1;transform:translateX(-50%) translateY(0) scale(1.06);}
+      75%{opacity:1;}
+      100%{opacity:0;transform:translateX(-50%) translateY(-30px) scale(.9);}
     }
 
-    /* Cat container */
-    #catWrap {
-      position: relative;
-      width: 280px;
-      height: 280px;
-      filter: drop-shadow(0 12px 40px rgba(0,0,0,0.5));
+    /* ── RESPONSIVE ──────────────────────────── */
+    @media(max-width:700px){
+      #gameScreen{flex-direction:column;align-items:center;}
+      #gameLb{width:min(360px,94vw);position:static;}
     }
-
-    /* Cat body drawn with CSS */
-    .cat {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    @media(max-width:400px){
+      h1{font-size:1.9rem;}
+      #counter{font-size:3rem;}
+      #catImg{width:72vw;height:72vw;}
     }
-
-    /* Photo face */
-    #catImg {
-      display: block;
-      width: min(280px, 80vw);
-      height: min(280px, 80vw);
-      object-fit: cover;
-      border-radius: 50%;
-      border: 4px solid rgba(255,215,0,0.4);
-      box-shadow: 0 0 0 0 rgba(255,215,0,0);
-      cursor: pointer;
-      transition: transform 0.08s ease, box-shadow 0.08s ease;
-    }
-    #catImg.popped {
-      transform: scale(1.14);
-      box-shadow: 0 0 55px 18px rgba(255,215,0,0.75), 0 0 20px 4px rgba(255,100,50,0.5);
-    }
-    #catImg:active { transform: scale(0.93); }
-
-    /* Ripple on pop */
-    .ripple {
-      position: fixed;
-      border-radius: 50%;
-      border: 4px solid rgba(255,215,0,0.8);
-      pointer-events: none;
-      z-index: 49;
-      animation: rippleOut 0.55s ease-out forwards;
-    }
-    @keyframes rippleOut {
-      0%   { opacity: 0.85; transform: scale(0.3); }
-      100% { opacity: 0;    transform: scale(2.4); }
-    }
-
-    /* Click label */
-    #clickLabel {
-      font-size: 1.2rem;
-      color: rgba(255,255,255,0.55);
-      letter-spacing: 2px;
-      animation: blink 1.5s ease-in-out infinite;
-    }
-    @keyframes blink {
-      0%,100% { opacity: 1; }
-      50% { opacity: 0.35; }
-    }
-
-    /* Milestones */
-    #milestoneMsg {
-      position: fixed;
-      top: 60px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: linear-gradient(90deg, #FFD700, #FF6B6B);
-      color: #1a1a2e;
-      font-size: 1.4rem;
-      font-weight: 900;
-      padding: 12px 36px;
-      border-radius: 40px;
-      pointer-events: none;
-      opacity: 0;
-      z-index: 100;
-      white-space: nowrap;
-      box-shadow: 0 6px 28px rgba(255,107,107,0.4);
-    }
-    #milestoneMsg.show {
-      animation: milestoneAnim 2.2s ease forwards;
-    }
-    @keyframes milestoneAnim {
-      0%   { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.85); }
-      15%  { opacity: 1; transform: translateX(-50%) translateY(0)     scale(1.08); }
-      75%  { opacity: 1; transform: translateX(-50%) translateY(0)     scale(1);    }
-      100% { opacity: 0; transform: translateX(-50%) translateY(-30px) scale(0.9);  }
-    }
-
-    /* Pop numbers flying up */
-    .pop-num {
-      position: fixed;
-      font-size: 2.2rem;
-      font-weight: 900;
-      color: #FFD700;
-      pointer-events: none;
-      z-index: 50;
-      text-shadow: 0 3px 12px rgba(0,0,0,0.55), 0 0 20px rgba(255,200,0,0.6);
-      animation: floatUp 0.75s cubic-bezier(0.22,1,0.36,1) forwards;
-    }
-    @keyframes floatUp {
-      0%   { opacity: 1;   transform: translateY(0)     scale(1.2); }
-      40%  { opacity: 1;   transform: translateY(-40px) scale(1);   }
-      100% { opacity: 0;   transform: translateY(-100px) scale(0.8); }
-    }
-
-    /* Stats bar */
-    #stats {
-      display: flex;
-      gap: 20px;
-      margin-top: 6px;
-    }
-    .stat-badge {
-      background: rgba(255,255,255,0.09);
-      border: 1px solid rgba(255,255,255,0.16);
-      color: white;
-      padding: 7px 18px;
-      border-radius: 20px;
-      font-size: 14px;
-      text-align: center;
-    }
-    .stat-badge span { display: block; font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
-
-    /* Reset button */
-    #resetBtn {
-      background: rgba(231,76,60,0.2);
-      border: 1px solid rgba(231,76,60,0.5);
-      color: #e74c3c;
-      padding: 8px 22px;
-      border-radius: 20px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: bold;
-      letter-spacing: 1px;
-      transition: all 0.2s;
-    }
-    #resetBtn:hover {
-      background: rgba(231,76,60,0.4);
-      transform: scale(1.05);
-    }
-
-    /* ─── RESPONSIVE ─────────────────────────────────────── */
-    @media (max-width: 480px) {
-      h1 { font-size: 1.8rem; letter-spacing: 1px; }
-      #counter { font-size: 3rem; min-width: 140px; }
-      #pps { font-size: 0.85rem; padding: 4px 10px; }
-      #rankWrap { width: 90vw; }
-      #catImg { width: min(72vw, 280px); height: min(72vw, 280px); }
-      #clickLabel { font-size: 0.95rem; letter-spacing: 1px; }
-      #stats { flex-wrap: wrap; justify-content: center; gap: 10px; }
-      .stat-badge { padding: 6px 12px; font-size: 13px; }
-      #milestoneMsg { font-size: 1.1rem; padding: 10px 22px; white-space: normal; text-align: center; max-width: 90vw; }
-      .container { flex-direction: column; align-items: center; }
-      #leaderboard { width: calc(100vw - 32px); position: static; transform: none; top: auto; right: auto; }
-    }
-    @media (max-width: 360px) {
-      h1 { font-size: 1.5rem; }
-      #counter { font-size: 2.4rem; }
-      #catImg { width: 80vw; height: 80vw; }
-    }
-    @media (min-width: 481px) and (max-width: 768px) {
-      h1 { font-size: 2.2rem; }
-      #counter { font-size: 3.8rem; }
-      #catImg { width: 240px; height: 240px; }
-      .container { flex-direction: column; align-items: center; }
-      #leaderboard { width: min(480px, 92vw); position: static; transform: none; top: auto; right: auto; }
-    }
-
-    /* ─── USERNAME MODAL ──────────────────────────────────── */
-    #usernameModal {
-      position: fixed; inset: 0; z-index: 200;
-      background: rgba(0,0,0,0.75);
-      display: flex; align-items: center; justify-content: center;
-    }
-    #usernameModal.hidden { display: none; }
-    #usernameBox {
-      background: #16213e;
-      border: 2px solid rgba(255,215,0,0.4);
-      border-radius: 20px;
-      padding: 36px 32px;
-      text-align: center;
-      width: min(380px, 90vw);
-      box-shadow: 0 16px 48px rgba(0,0,0,0.6);
-    }
-    #usernameBox h2 { color: #FFD700; font-size: 1.6rem; margin-bottom: 10px; }
-    #usernameBox p  { color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 20px; }
-    #usernameInput {
-      width: 100%; padding: 12px 16px;
-      border-radius: 12px; border: 2px solid rgba(255,215,0,0.35);
-      background: rgba(255,255,255,0.07); color: white;
-      font-size: 1.1rem; text-align: center;
-      outline: none;
-    }
-    #usernameInput:focus { border-color: #FFD700; }
-    #startBtn {
-      margin-top: 16px; width: 100%;
-      padding: 12px; border-radius: 12px;
-      background: linear-gradient(90deg, #FFD700, #FF8C00);
-      border: none; cursor: pointer;
-      font-size: 1.1rem; font-weight: 900; color: #1a1a2e;
-      transition: transform 0.15s, box-shadow 0.15s;
-    }
-    #startBtn:hover { transform: scale(1.04); box-shadow: 0 6px 20px rgba(255,215,0,0.4); }
-
-    /* ─── LEADERBOARD ─────────────────────────────────────── */
-    #leaderboard {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 16px;
-      padding: 14px 18px;
-    }
-    #leaderboard h3 {
-      color: #FFD700; font-size: 1rem; letter-spacing: 1px;
-      margin-bottom: 10px; text-align: center;
-    }
-    #lbList { list-style: none; display: flex; flex-direction: column; gap: 6px; }
-    #lbList li {
-      display: flex; align-items: center; gap: 10px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 10px; padding: 7px 12px;
-      font-size: 0.9rem; color: white;
-      transition: background 0.3s;
-    }
-    #lbList li.me { background: rgba(255,215,0,0.18); border: 1px solid rgba(255,215,0,0.3); }
-    #lbList li .lb-rank { font-size: 1.2rem; width: 28px; text-align: center; }
-    #lbList li .lb-name { flex: 1; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #lbList li .lb-score { color: #FFD700; font-weight: 900; font-size: 1rem; }
-    #lbList li .lb-pps { color: rgba(255,255,255,0.45); font-size: 0.75rem; }
-    #onlineCount {
-      text-align: center; margin-top: 8px;
-      font-size: 0.8rem; color: rgba(255,255,255,0.4);
-    }
-    #onlineCount span { color: #2ecc71; font-weight: bold; }
   </style>
 </head>
 <body>
-
 <canvas id="bg-canvas"></canvas>
-
-<!-- Username Modal -->
-<div id="usernameModal">
-  <div id="usernameBox">
-    <h2>🐱 ยินดีต้อนรับ!</h2>
-    <p>ใส่ชื่อของคุณเพื่อแข่ง pop กับเพื่อน</p>
-    <input id="usernameInput" type="text" maxlength="20" placeholder="ชื่อของคุณ..."
-           onkeydown="if(event.key==='Enter') startGame()" autofocus />
-    <button id="startBtn" onclick="startGame()">🚀 เริ่มเลย!</button>
-  </div>
-</div>
-
-<div class="container">
-  <div id="gameCol">
-    <h1>🐱 SUMETH POP!</h1>
-
-  <div id="counterWrap">
-    <div id="counter">0</div>
-  </div>
-  <div id="pps">0.0 pops/sec</div>
-
-  <div id="rankWrap">
-    <div id="rankLabel">🐾 Rank: Newbie</div>
-    <div id="rankBar"><div id="rankFill"></div></div>
-  </div>
-
-  <img id="catImg" src="IMG_1126.JPG" alt="popcat" draggable="false">
-
-  <div id="clickLabel">คลิก / แตะ เพื่อ POP!</div>
-
-  <div id="stats">
-    <div class="stat-badge">
-      <strong id="bestPPS">0.0</strong>
-      <span>Best PPS</span>
-    </div>
-    <div class="stat-badge">
-      <strong id="totalSess">0</strong>
-      <span>Session Pops</span>
-    </div>
-    <div class="stat-badge">
-      <strong id="streakEl">0</strong>
-      <span>🔥 Streak</span>
-    </div>
-  </div>
-
-    <button id="resetBtn" onclick="resetGame()">🔄 Reset</button>
-  </div>
-
-  <!-- Leaderboard -->
-  <div id="leaderboard">
-    <h3>🏆 Leaderboard — Real-time</h3>
-    <ul id="lbList"></ul>
-    <div id="onlineCount">ออนไลน์: <span id="onlineNum">1</span> คน</div>
-  </div>
-</div>
-
 <div id="milestoneMsg"></div>
 
-<!-- Firebase -->
+<!-- SCREEN 1: Username -->
+<div id="loginScreen" class="screen active">
+  <h1>🐱 SUMETH POP!</h1>
+  <div class="card">
+    <h2>ยินดีต้อนรับ!</h2>
+    <label>ชื่อผู้เล่น</label>
+    <input id="usernameInput" type="text" maxlength="20" placeholder="ชื่อของคุณ..."
+           onkeydown="if(event.key==='Enter') confirmName()"/>
+    <button class="btn btn-gold" onclick="confirmName()">🚀 เข้าสู่ล็อบบี้!</button>
+  </div>
+</div>
+
+<!-- SCREEN 2: Lobby -->
+<div id="lobbyScreen" class="screen">
+  <h1>🐱 SUMETH POP!</h1>
+  <div style="display:flex;gap:10px;margin-bottom:4px;flex-wrap:wrap;justify-content:center">
+    <button class="btn btn-gold" style="width:auto;padding:10px 22px" onclick="showScreen('createScreen')">＋ สร้างห้อง</button>
+    <button class="btn btn-ghost" style="width:auto;padding:10px 22px" onclick="showScreen('joinCodeScreen')">🔑 เข้าด้วยรหัส</button>
+  </div>
+  <div style="color:rgba(255,255,255,0.5);font-size:.85rem">เล่นในฐานะ: <span id="lobbyUsername" style="color:#FFD700;font-weight:bold"></span></div>
+  <div id="roomList"><div id="noRooms">⏳ กำลังโหลด...</div></div>
+</div>
+
+<!-- SCREEN 3: Create Room -->
+<div id="createScreen" class="screen">
+  <div class="card">
+    <h2>＋ สร้างห้องใหม่</h2>
+    <label>ชื่อห้อง</label>
+    <input id="roomNameInput" type="text" maxlength="30" placeholder="ชื่อห้อง..."/>
+    <label>เวลานับถอยหลัง</label>
+    <select id="roomDuration">
+      <option value="30">30 วินาที 🔥</option>
+      <option value="60" selected>60 วินาที ⚡</option>
+      <option value="120">120 วินาที 💪</option>
+      <option value="180">180 วินาที 🏆</option>
+    </select>
+    <button class="btn btn-gold" onclick="createRoom()">🚀 สร้างห้อง</button>
+    <button class="btn btn-ghost" onclick="showScreen('lobbyScreen')">← กลับ</button>
+  </div>
+</div>
+
+<!-- SCREEN 4: Join by Code -->
+<div id="joinCodeScreen" class="screen">
+  <div class="card">
+    <h2>🔑 เข้าห้องด้วยรหัส</h2>
+    <label>รหัสห้อง (4 ตัวอักษร)</label>
+    <input id="joinCodeInput" type="text" maxlength="4" placeholder="XXXX"
+           style="text-transform:uppercase;text-align:center;font-size:1.8rem;letter-spacing:8px"
+           oninput="this.value=this.value.toUpperCase()"
+           onkeydown="if(event.key==='Enter') joinByCode()"/>
+    <button class="btn btn-gold" onclick="joinByCode()">🚪 เข้าห้อง</button>
+    <button class="btn btn-ghost" onclick="showScreen('lobbyScreen')">← กลับ</button>
+  </div>
+</div>
+
+<!-- SCREEN 5: Waiting Room -->
+<div id="waitingScreen" class="screen">
+  <div class="card" id="waitingRoomBox">
+    <h2 id="waitRoomName">ห้องรอ</h2>
+    <div id="roomCodeDisplay">
+      รหัสห้อง: <strong id="roomCodeShow">----</strong>
+      <div style="font-size:.75rem;color:rgba(255,255,255,0.4);margin-top:4px">แชร์รหัสนี้ให้เพื่อน</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span style="color:rgba(255,255,255,0.6);font-size:.85rem">⏱️ <span id="waitDuration"></span> วิ</span>
+      <span style="color:rgba(255,255,255,0.6);font-size:.85rem">👥 <span id="waitPlayerCount">0</span> คน</span>
+    </div>
+    <div id="waitPlayerList"></div>
+    <button class="btn btn-gold" id="startBtn" onclick="hostStartGame()" style="display:none">▶ เริ่มเกม!</button>
+    <div id="waitingMsg" style="text-align:center;color:rgba(255,255,255,0.5);font-size:.85rem;margin-top:12px">รอ host เริ่มเกม...</div>
+    <button class="btn btn-ghost" onclick="leaveRoom()" style="margin-top:8px">← ออกจากห้อง</button>
+  </div>
+</div>
+
+<!-- SCREEN 6: Game -->
+<div id="gameScreen" class="screen">
+  <div id="gameCol">
+    <div id="timerBox">
+      <div id="timerLabel">เวลาเหลือ</div>
+      <div id="timerValue">60</div>
+    </div>
+    <div id="counter">0</div>
+    <div id="pps">0.0 pops/sec</div>
+    <div id="rankWrap">
+      <div id="rankLabel">🐾 Rank: Newbie 🐣</div>
+      <div id="rankBar"><div id="rankFill"></div></div>
+    </div>
+    <img id="catImg" src="IMG_1126.JPG" alt="popcat" draggable="false"/>
+    <div id="clickLabel">คลิก / แตะ เพื่อ POP!</div>
+  </div>
+  <div id="gameLb">
+    <h3>🏆 <span id="gameLbRoomName">ห้อง</span></h3>
+    <ul id="gameLbList"></ul>
+  </div>
+</div>
+
+<!-- SCREEN 7: Results -->
+<div id="resultsScreen" class="screen">
+  <div class="card" id="resultsBox">
+    <h2>🎉 สิ้นสุดเกม!</h2>
+    <div style="font-size:1rem;color:rgba(255,255,255,0.6)">ผู้ชนะ</div>
+    <div id="winnerName">—</div>
+    <ul id="resultsList"></ul>
+    <button class="btn btn-gold" onclick="showScreen('lobbyScreen');initLobby();" style="margin-top:18px">🏠 กลับล็อบบี้</button>
+    <button class="btn btn-ghost" onclick="playAgainSameRoom()">🔄 เล่นอีกรอบ (ห้องเดิม)</button>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
 <script type="module">
-import { initializeApp }                    from 'https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js';
-import { getDatabase, ref, set, onValue,
-         serverTimestamp, onDisconnect,
-         runTransaction }                   from 'https://www.gstatic.com/firebasejs/10.11.1/firebase-database.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js';
+import { getDatabase, ref, set, get, onValue, off,
+         serverTimestamp, onDisconnect, remove, update }
+  from 'https://www.gstatic.com/firebasejs/10.11.1/firebase-database.js';
 
-const firebaseConfig = {
-  apiKey:            'AIzaSyCzk2OfDGjDgv-CxTCAt5adxnep5SK5bTQ',
-  authDomain:        'sumeth-pop.firebaseapp.com',
-  databaseURL:       'https://sumeth-pop-default-rtdb.asia-southeast1.firebasedatabase.app',
-  projectId:         'sumeth-pop',
-  storageBucket:     'sumeth-pop.firebasestorage.app',
-  messagingSenderId: '995810358540',
-  appId:             '1:995810358540:web:4f0675661519040ef7c529',
-};
-const app = initializeApp(firebaseConfig);
-const db  = getDatabase(app);
-
-// Expose to global scope so the main script can call them
-window._fbReady = { db, ref, set, onValue, serverTimestamp, onDisconnect, runTransaction };
+const app = initializeApp({
+  apiKey:'AIzaSyCzk2OfDGjDgv-CxTCAt5adxnep5SK5bTQ',
+  authDomain:'sumeth-pop.firebaseapp.com',
+  databaseURL:'https://sumeth-pop-default-rtdb.asia-southeast1.firebasedatabase.app',
+  projectId:'sumeth-pop',
+  storageBucket:'sumeth-pop.firebasestorage.app',
+  messagingSenderId:'995810358540',
+  appId:'1:995810358540:web:4f0675661519040ef7c529',
+});
+const db = getDatabase(app);
+window._fb = { db, ref, set, get, onValue, off, serverTimestamp, onDisconnect, remove, update };
 window.dispatchEvent(new Event('fb-ready'));
 </script>
 
 <script>
-// ─── BG PARTICLES ──────────────────────────────────────────────────────────
+// ── BG PARTICLES ─────────────────────────────────────────────
 const bgCanvas = document.getElementById('bg-canvas');
-const bgCtx    = bgCanvas.getContext('2d');
-let bgW, bgH, bgParticles = [];
+const bgCtx = bgCanvas.getContext('2d');
+let bgW, bgH;
+const bgPts = Array.from({length:80}, () => ({
+  x:Math.random()*2000, y:Math.random()*1200,
+  r:1+Math.random()*2.5, vx:(Math.random()-.5)*.35, vy:(Math.random()-.5)*.35,
+  a:.15+Math.random()*.5
+}));
+function resizeBg(){ bgW=bgCanvas.width=innerWidth; bgH=bgCanvas.height=innerHeight; }
+resizeBg(); addEventListener('resize', resizeBg);
+(function loop(){
+  bgCtx.clearRect(0,0,bgW,bgH);
+  bgPts.forEach(p=>{
+    p.x=(p.x+p.vx+bgW)%bgW; p.y=(p.y+p.vy+bgH)%bgH;
+    bgCtx.beginPath(); bgCtx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    bgCtx.fillStyle=`rgba(255,215,0,${p.a})`; bgCtx.fill();
+  });
+  requestAnimationFrame(loop);
+})();
 
-function resizeBg() {
-  bgW = bgCanvas.width  = window.innerWidth;
-  bgH = bgCanvas.height = window.innerHeight;
-}
-resizeBg();
-window.addEventListener('resize', resizeBg);
-
-for (let i = 0; i < 80; i++) bgParticles.push({
-  x: Math.random() * 2000,
-  y: Math.random() * 1200,
-  r: 1 + Math.random() * 2.5,
-  vx: (Math.random() - 0.5) * 0.35,
-  vy: (Math.random() - 0.5) * 0.35,
-  alpha: 0.15 + Math.random() * 0.5,
-});
-
-function animBg() {
-  bgCtx.clearRect(0, 0, bgW, bgH);
-  for (const p of bgParticles) {
-    p.x = (p.x + p.vx + bgW) % bgW;
-    p.y = (p.y + p.vy + bgH) % bgH;
-    bgCtx.beginPath();
-    bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    bgCtx.fillStyle = `rgba(255,215,0,${p.alpha})`;
-    bgCtx.fill();
-  }
-  requestAnimationFrame(animBg);
-}
-animBg();
-
-// ─── PHOTO ANIMATION ─────────────────────────────────────────────────────
-const catImg    = document.getElementById('catImg');
-const IMG_CLOSED = 'IMG_1126.JPG';
-const IMG_OPEN   = 'IMG_1127.JPG';
-let openTimer  = null;
-let popLevel   = 0;
-
-function openFace() {
-  catImg.src = IMG_OPEN;
-  catImg.classList.add('popped');
-  clearTimeout(openTimer);
-  openTimer = setTimeout(() => {
-    catImg.src = IMG_CLOSED;
-    catImg.classList.remove('popped');
-  }, 120);
-}
-
-// ─── GAME STATE ────────────────────────────────────────────────────────────
-let count      = 0;
-let sessionPops = 0;
-let bestPPS    = 0;
-let streak     = 0;
-let lastClick  = 0;
-const popTimes = [];
-
-const RANKS = [
-  { name: 'Newbie 🐣',     min: 0,      max: 50    },
-  { name: 'Clicker 🐱',    min: 50,     max: 200   },
-  { name: 'Popper 😺',     min: 200,    max: 500   },
-  { name: 'Maniac 😼',     min: 500,    max: 1500  },
-  { name: 'Nyan Cat 🌈',   min: 1500,   max: 5000  },
-  { name: 'God of Pop ⭐', min: 5000,   max: Infinity },
+// ── CONSTANTS ─────────────────────────────────────────────────
+const IMG_CLOSED='IMG_1126.JPG', IMG_OPEN='IMG_1127.JPG';
+new Image().src = IMG_OPEN; // preload
+const RANKS=[
+  {name:'Newbie 🐣',min:0},{name:'Clicker 🐱',min:50},
+  {name:'Popper 😺',min:200},{name:'Maniac 😼',min:500},
+  {name:'Nyan Cat 🌈',min:1500},{name:'God of Pop ⭐',min:5000},
 ];
-const MILESTONES = [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000];
-let nextMilestoneIdx = 0;
+const MILESTONES=[10,50,100,250,500,1000,2500,5000];
+const MEDALS=['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+const CHARS='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-function getRank(n) {
-  for (let i = RANKS.length - 1; i >= 0; i--) {
-    if (n >= RANKS[i].min) return { rank: RANKS[i], next: RANKS[i + 1] || null, idx: i };
+// ── STATE ─────────────────────────────────────────────────────
+let _uid = Math.random().toString(36).slice(2)+Date.now().toString(36);
+let _username=null, _roomId=null, _roomData=null, _isHost=false;
+let count=0, _timerInterval=null, _roomUnsub=null, _openTimer=null;
+let _clickTimes=[], _popTimes=[], nextMil=0;
+
+// ── HELPERS ───────────────────────────────────────────────────
+function escHtml(s){
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function genCode(){
+  return Array.from({length:4},()=>CHARS[Math.floor(Math.random()*CHARS.length)]).join('');
+}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+window.showScreen = showScreen;
+
+function fb(){ return window._fb; }
+function fbReady(fn){
+  if(window._fb) fn();
+  else addEventListener('fb-ready', fn, {once:true});
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────
+function confirmName(){
+  const v=document.getElementById('usernameInput').value.trim();
+  if(!v){ document.getElementById('usernameInput').style.borderColor='#e74c3c'; return; }
+  _username=v;
+  document.getElementById('lobbyUsername').textContent=v;
+  showScreen('lobbyScreen');
+  fbReady(initLobby);
+}
+window.confirmName=confirmName;
+
+// ── LOBBY ─────────────────────────────────────────────────────
+function initLobby(){
+  const {db,ref,onValue,off}=fb();
+  if(_roomUnsub){ try{off(_roomUnsub);}catch(e){} _roomUnsub=null; }
+  const r=ref(db,'rooms');
+  _roomUnsub=r;
+  onValue(r, snap=>{
+    const data=snap.val()||{};
+    const rooms=Object.entries(data)
+      .filter(([,r])=> r.status!=='finished' || (Date.now()-(r.endedAt||0))<30000)
+      .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
+    const list=document.getElementById('roomList');
+    if(!rooms.length){
+      list.innerHTML='<div id="noRooms">ยังไม่มีห้อง — กด "สร้างห้อง" ด้านบน!</div>';
+      return;
+    }
+    const statusLabel={waiting:'⏳ รอผู้เล่น',playing:'🔴 กำลังเล่น',finished:'✅ จบแล้ว'};
+    const statusCls={waiting:'status-waiting',playing:'status-playing',finished:'status-finished'};
+    list.innerHTML=rooms.map(([id,r])=>{
+      const pc=Object.keys(r.players||{}).length;
+      return `<div class="room-item" onclick="joinRoom('${id}')">
+        <div class="room-icon">🎮</div>
+        <div class="room-info">
+          <div class="room-name">${escHtml(r.name||'ห้องไม่มีชื่อ')}</div>
+          <div class="room-meta">⏱️ ${r.duration}s &nbsp;·&nbsp; 👤 ${pc} คน &nbsp;·&nbsp; รหัส <b style="color:#FFD700">${id}</b></div>
+        </div>
+        <span class="room-status ${statusCls[r.status]||'status-waiting'}">${statusLabel[r.status]||'รอ'}</span>
+      </div>`;
+    }).join('');
+  });
+}
+window.initLobby=initLobby;
+
+// ── CREATE ROOM ───────────────────────────────────────────────
+async function createRoom(){
+  const {db,ref,set,get}=fb();
+  const name=document.getElementById('roomNameInput').value.trim()||`ห้องของ ${_username}`;
+  const dur=parseInt(document.getElementById('roomDuration').value);
+  let code;
+  for(let i=0;i<10;i++){
+    code=genCode();
+    const s=await get(ref(db,'rooms/'+code));
+    if(!s.exists()) break;
   }
-  return { rank: RANKS[0], next: RANKS[1], idx: 0 };
+  _roomId=code; _isHost=true;
+  await set(ref(db,'rooms/'+code),{
+    name, duration:dur, status:'waiting',
+    host:_uid, hostName:_username, createdAt:Date.now(),
+    players:{[_uid]:{name:_username,score:0,uid:_uid}}
+  });
+  fb().onDisconnect(ref(db,`rooms/${code}/players/${_uid}`)).remove();
+  enterWaiting(code);
+}
+window.createRoom=createRoom;
+
+// ── JOIN ROOM ─────────────────────────────────────────────────
+async function joinRoom(code){
+  const {db,ref,get,update}=fb();
+  const snap=await get(ref(db,'rooms/'+code));
+  if(!snap.exists()){ alert('ไม่พบห้องนี้'); return; }
+  const room=snap.val();
+  if(room.status==='finished'){ alert('ห้องนี้จบแล้ว'); return; }
+  _roomId=code; _isHost=(room.host===_uid);
+  await update(ref(db,`rooms/${code}/players/${_uid}`),{name:_username,score:0,uid:_uid});
+  fb().onDisconnect(ref(db,`rooms/${code}/players/${_uid}`)).remove();
+  enterWaiting(code);
+}
+window.joinRoom=joinRoom;
+
+async function joinByCode(){
+  const code=document.getElementById('joinCodeInput').value.trim().toUpperCase();
+  if(code.length!==4){ alert('รหัสต้อง 4 ตัวอักษร'); return; }
+  await joinRoom(code);
+}
+window.joinByCode=joinByCode;
+
+// ── WAITING ROOM ──────────────────────────────────────────────
+function enterWaiting(code){
+  showScreen('waitingScreen');
+  document.getElementById('roomCodeShow').textContent=code;
+  const {db,ref,onValue,off}=fb();
+  if(_roomUnsub){ try{off(_roomUnsub);}catch(e){} }
+  const r=ref(db,'rooms/'+code);
+  _roomUnsub=r;
+  onValue(r, snap=>{
+    if(!snap.exists()){ showScreen('lobbyScreen'); fbReady(initLobby); return; }
+    const room=snap.val(); _roomData=room;
+    document.getElementById('waitRoomName').textContent='🎮 '+escHtml(room.name||'ห้อง');
+    document.getElementById('waitDuration').textContent=room.duration;
+    const players=Object.values(room.players||{});
+    document.getElementById('waitPlayerCount').textContent=players.length;
+    document.getElementById('waitPlayerList').innerHTML=players.map(p=>
+      `<div class="wait-player">
+        ${p.uid===room.host?'<span class="host-badge">HOST</span>':'👤'}
+        <span>${escHtml(p.name)}</span>
+      </div>`
+    ).join('');
+    const isH=room.host===_uid;
+    document.getElementById('startBtn').style.display=isH?'block':'none';
+    document.getElementById('waitingMsg').style.display=isH?'none':'block';
+    if(room.status==='playing' && !document.getElementById('gameScreen').classList.contains('active'))
+      enterGame(room);
+    if(room.status==='finished') showResults(room);
+  });
 }
 
-function updateUI() {
-  const el = document.getElementById('counter');
-  el.textContent = count.toLocaleString();
-  el.classList.add('pop');
-  setTimeout(() => el.classList.remove('pop'), 80);
+async function hostStartGame(){
+  if(!_roomId) return;
+  const {db,ref,update}=fb();
+  const now=Date.now();
+  await update(ref(db,'rooms/'+_roomId),{
+    status:'playing', startedAt:now, endAt:now+(_roomData.duration*1000)
+  });
+}
+window.hostStartGame=hostStartGame;
 
-  document.getElementById('totalSess').textContent = sessionPops.toLocaleString();
-  document.getElementById('streakEl').textContent  = streak;
+// ── GAME ──────────────────────────────────────────────────────
+function enterGame(room){
+  _roomData=room; count=0; nextMil=0; _clickTimes=[]; _popTimes=[];
+  document.getElementById('counter').textContent='0';
+  document.getElementById('pps').textContent='0.0 pops/sec';
+  document.getElementById('rankFill').style.width='0%';
+  document.getElementById('rankLabel').textContent='🐾 Rank: Newbie 🐣';
+  document.getElementById('gameLbRoomName').textContent=escHtml(room.name||'ห้อง');
+  showScreen('gameScreen');
 
-  // PPS
-  const now = performance.now();
-  popTimes.push(now);
-  while (popTimes.length > 0 && popTimes[0] < now - 3000) popTimes.shift();
-  const pps = (popTimes.length / 3).toFixed(1);
-  document.getElementById('pps').textContent = pps + ' pops/sec';
-  if (parseFloat(pps) > bestPPS) {
-    bestPPS = parseFloat(pps);
-    document.getElementById('bestPPS').textContent = bestPPS.toFixed(1);
+  // countdown
+  if(_timerInterval) clearInterval(_timerInterval);
+  const tvEl=document.getElementById('timerValue');
+  _timerInterval=setInterval(()=>{
+    const rem=Math.max(0,Math.ceil((room.endAt-Date.now())/1000));
+    tvEl.textContent=rem;
+    tvEl.classList.toggle('urgent',rem<=10);
+    if(rem<=0){ clearInterval(_timerInterval); _timerInterval=null; }
+  },250);
+
+  // live leaderboard
+  const {db,ref,onValue}=fb();
+  onValue(ref(db,'rooms/'+_roomId+'/players'),snap=>{
+    renderGameLb(snap.val()||{});
+    // check room status for end
+    fb().get(ref(db,'rooms/'+_roomId)).then(s=>{
+      if(s.exists()){
+        const r=s.val(); _roomData=r;
+        if(r.status==='finished' && document.getElementById('gameScreen').classList.contains('active'))
+          showResults(r);
+      }
+    });
+  });
+
+  // host watches for endAt
+  if(_isHost){
+    const checkEnd=setInterval(async()=>{
+      if(!_roomData||_roomData.status!=='playing'){ clearInterval(checkEnd); return; }
+      if(Date.now()>=((_roomData.endAt)||Infinity)){
+        clearInterval(checkEnd);
+        syncScore();
+        const {db,ref,update}=fb();
+        const s=await fb().get(ref(db,'rooms/'+_roomId));
+        if(s.exists()&&s.val().status==='playing')
+          await update(ref(db,'rooms/'+_roomId),{status:'finished',endedAt:Date.now()});
+      }
+    },500);
   }
-
-  // Rank bar
-  const { rank, next, idx } = getRank(count);
-  const name = rank.name;
-  document.getElementById('rankLabel').textContent = '🐾 Rank: ' + name;
-  if (next) {
-    const pct = Math.min(100, (count - rank.min) / (next.min - rank.min) * 100);
-    document.getElementById('rankFill').style.width = pct + '%';
-  } else {
-    document.getElementById('rankFill').style.width = '100%';
-  }
-
-  // Pop level (for visual effects)
-  popLevel = Math.min(4, idx);
 }
 
-function spawnRipple(x, y, size) {
-  const el = document.createElement('div');
-  el.className = 'ripple';
-  el.style.left   = (x - size/2) + 'px';
-  el.style.top    = (y - size/2) + 'px';
-  el.style.width  = size + 'px';
-  el.style.height = size + 'px';
-  document.body.appendChild(el);
-  el.addEventListener('animationend', () => el.remove());
+function renderGameLb(players){
+  const sorted=Object.entries(players)
+    .map(([uid,p])=>({...p,uid}))
+    .sort((a,b)=>b.score-a.score);
+  document.getElementById('gameLbList').innerHTML=sorted.map((p,i)=>
+    `<li class="${p.uid===_uid?'me':''}">
+      <span class="lb-rank">${MEDALS[i]??i+1}</span>
+      <span class="lb-name">${escHtml(p.name)}</span>
+      <span class="lb-score">${(p.score||0).toLocaleString()}</span>
+    </li>`
+  ).join('');
 }
 
-function spawnPopNum(x, y) {
-  const el = document.createElement('div');
-  el.className = 'pop-num';
-  el.textContent = '+1';
-  el.style.left = x + 'px';
-  el.style.top  = y + 'px';
-  document.body.appendChild(el);
-  el.addEventListener('animationend', () => el.remove());
+// ── POP MECHANICS ─────────────────────────────────────────────
+const catImg=document.getElementById('catImg');
+
+function openFace(){
+  catImg.src=IMG_OPEN; catImg.classList.add('popped');
+  clearTimeout(_openTimer);
+  _openTimer=setTimeout(()=>{ catImg.src=IMG_CLOSED; catImg.classList.remove('popped'); },120);
+}
+function spawnRipple(x,y,s){
+  const el=document.createElement('div'); el.className='ripple';
+  el.style.cssText=`left:${x-s/2}px;top:${y-s/2}px;width:${s}px;height:${s}px`;
+  document.body.appendChild(el); el.addEventListener('animationend',()=>el.remove());
+}
+function spawnNum(x,y){
+  const el=document.createElement('div'); el.className='pop-num'; el.textContent='+1';
+  el.style.cssText=`left:${x}px;top:${y}px`;
+  document.body.appendChild(el); el.addEventListener('animationend',()=>el.remove());
 }
 
-function checkMilestone() {
-  while (nextMilestoneIdx < MILESTONES.length && count >= MILESTONES[nextMilestoneIdx]) {
-    showMilestone(`🎉 ${MILESTONES[nextMilestoneIdx].toLocaleString()} Pops!`);
-    nextMilestoneIdx++;
-  }
-}
-
-function showMilestone(msg) {
-  const el = document.getElementById('milestoneMsg');
-  el.textContent = msg;
-  el.classList.remove('show');
-  void el.offsetWidth; // reflow
-  el.classList.add('show');
-}
-
-function doClick(e) {
-  // Client-side rate limit: max 20 clicks/sec
-  const now = Date.now();
-  if (!window._clickTimes) window._clickTimes = [];
-  window._clickTimes.push(now);
-  window._clickTimes = window._clickTimes.filter(t => t > now - 1000);
-  if (window._clickTimes.length > 20) return;
+function doClick(e){
+  if(!_roomData||_roomData.status!=='playing') return;
+  const now=Date.now();
+  if(_roomData.endAt&&now>=_roomData.endAt) return;
+  _clickTimes.push(now);
+  _clickTimes=_clickTimes.filter(t=>t>now-1000);
+  if(_clickTimes.length>20) return;
 
   count++;
-  sessionPops++;
-
-  // Streak
-  if (now - lastClick < 800) { streak++; } else { streak = 1; }
-  lastClick = now;
-
   openFace();
-  checkMilestone();
-  updateUI();
 
-  // Pop number at click position
-  const rect = catImg.getBoundingClientRect();
-  const cx   = e ? (e.touches ? e.touches[0].clientX : e.clientX) : rect.left + rect.width / 2;
-  const cy   = e ? (e.touches ? e.touches[0].clientY : e.clientY) : rect.top  + rect.height / 2;
-  spawnPopNum(cx - 16, cy - 30);
-  spawnRipple(rect.left + rect.width/2, rect.top + rect.height/2, rect.width);
-}
+  // pps
+  _popTimes.push(performance.now());
+  while(_popTimes.length&&_popTimes[0]<performance.now()-3000) _popTimes.shift();
+  const pps=(_popTimes.length/3).toFixed(1);
+  document.getElementById('pps').textContent=pps+' pops/sec';
 
-catImg.addEventListener('click',      doClick);
-catImg.addEventListener('touchstart', e => { e.preventDefault(); doClick(e); }, { passive: false });
-document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); doClick(); } });
+  // counter
+  const cel=document.getElementById('counter');
+  cel.textContent=count.toLocaleString();
+  cel.classList.add('pop'); setTimeout(()=>cel.classList.remove('pop'),80);
 
-// Preload open image
-const _preload = new Image(); _preload.src = IMG_OPEN;
+  // rank
+  const rank=RANKS.slice().reverse().find(r=>count>=r.min)||RANKS[0];
+  const next=RANKS[RANKS.indexOf(rank)+1];
+  document.getElementById('rankLabel').textContent='🐾 Rank: '+rank.name;
+  document.getElementById('rankFill').style.width=next?Math.min(100,(count-rank.min)/(next.min-rank.min)*100)+'%':'100%';
 
-function resetGame() {
-  if (!confirm('รีเซ็ตคะแนนทั้งหมด?')) return;
-  count = 0; sessionPops = 0; streak = 0; bestPPS = 0; nextMilestoneIdx = 0;
-  popTimes.length = 0;
-  document.getElementById('counter').textContent = '0';
-  document.getElementById('pps').textContent = '0.0 pops/sec';
-  document.getElementById('bestPPS').textContent = '0.0';
-  document.getElementById('totalSess').textContent = '0';
-  document.getElementById('streakEl').textContent = '0';
-  document.getElementById('rankLabel').textContent = '🐾 Rank: Newbie 🐣';
-  document.getElementById('rankFill').style.width = '0%';
-  popLevel = 0;
-  catImg.src = IMG_CLOSED;
-  catImg.classList.remove('popped');
-  if (window._uid) syncScore();
-}
-
-// ─── FIREBASE LEADERBOARD ───────────────────────────────────────────────
-// uid = random per session
-window._uid      = null;
-window._username = null;
-let _syncTimer   = null;
-
-const MEDALS = ['🥇','🥈','🥉','👍','👍','👍','👍','👍','👍','👍'];
-
-function genUID() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-function syncScore() {
-  const { db, ref, set, serverTimestamp } = window._fbReady;
-  if (!window._uid) return;
-  set(ref(db, 'players/' + window._uid), {
-    name:      window._username,
-    score:     count,
-    pps:       parseFloat(document.getElementById('pps').textContent) || 0,
-    updatedAt: serverTimestamp(),
-  });
-}
-
-function renderLeaderboard(snap) {
-  const data = snap.val() || {};
-  const list = Object.entries(data)
-    .map(([uid, v]) => ({ uid, ...v }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 10);
-
-  document.getElementById('onlineNum').textContent = list.length;
-  const ul = document.getElementById('lbList');
-  ul.innerHTML = '';
-  list.forEach((p, i) => {
-    const li  = document.createElement('li');
-    const isMe = p.uid === window._uid;
-    if (isMe) li.classList.add('me');
-    li.innerHTML = `
-      <span class="lb-rank">${MEDALS[i] ?? (i+1)}</span>
-      <span class="lb-name">${escHtml(p.name)}${isMe ? ' <em style="opacity:.55;font-style:normal">(you)</em>' : ''}</span>
-      <span class="lb-pps">${(p.pps||0).toFixed(1)}/s</span>
-      <span class="lb-score">${(p.score||0).toLocaleString()}</span>
-    `;
-    ul.appendChild(li);
-  });
-}
-
-function escHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-function initFirebase() {
-  const { db, ref, set, onValue, serverTimestamp, onDisconnect } = window._fbReady;
-  window._uid = genUID();
-
-  // Remove player on disconnect
-  const playerRef = ref(db, 'players/' + window._uid);
-  onDisconnect(playerRef).remove();
-
-  // Listen to all players real-time
-  onValue(ref(db, 'players'), renderLeaderboard);
-
-  // Sync score every 3 seconds
-  _syncTimer = setInterval(syncScore, 3000);
-}
-
-function startGame() {
-  const input = document.getElementById('usernameInput');
-  const name  = input.value.trim();
-  if (!name) { input.focus(); input.style.borderColor='#e74c3c'; return; }
-  window._username = name;
-  document.getElementById('usernameModal').classList.add('hidden');
-  if (window._fbReady) { initFirebase(); } else {
-    window.addEventListener('fb-ready', initFirebase, { once: true });
+  // milestone
+  if(nextMil<MILESTONES.length&&count>=MILESTONES[nextMil]){
+    showMilestone('🎉 '+MILESTONES[nextMil].toLocaleString()+' Pops!');
+    nextMil++;
   }
+
+  // visual
+  const rect=catImg.getBoundingClientRect();
+  const cx=e?(e.touches?e.touches[0].clientX:e.clientX):rect.left+rect.width/2;
+  const cy=e?(e.touches?e.touches[0].clientY:e.clientY):rect.top+rect.height/2;
+  spawnNum(cx-16,cy-30);
+  spawnRipple(rect.left+rect.width/2,rect.top+rect.height/2,rect.width);
+
+  // sync debounced
+  clearTimeout(window._syncDeb);
+  window._syncDeb=setTimeout(syncScore,400);
 }
-window.startGame = startGame;
 
-// Auto-sync on each doClick (debounced)
-const _origDoClick = doClick;
-window.doClick = function(e) {
-  _origDoClick.call(this, e);
-  clearTimeout(window._clickDebounce);
-  window._clickDebounce = setTimeout(syncScore, 500);
-};
-// Re-bind events to new doClick
-catImg.removeEventListener('click', _origDoClick);
-catImg.addEventListener('click', window.doClick);
+function syncScore(){
+  if(!window._fb||!_roomId) return;
+  const {db,ref,update}=fb();
+  update(ref(db,`rooms/${_roomId}/players/${_uid}`),{name:_username,score:count,uid:_uid});
+}
 
-// Firebase ready check (module may load after script)
-if (window._fbReady && window._username) initFirebase();
+catImg.addEventListener('click',doClick);
+catImg.addEventListener('touchstart',e=>{e.preventDefault();doClick(e);},{passive:false});
+document.addEventListener('keydown',e=>{ if(e.code==='Space'&&document.getElementById('gameScreen').classList.contains('active')){e.preventDefault();doClick();} });
+
+// ── RESULTS ───────────────────────────────────────────────────
+function showResults(room){
+  if(_timerInterval){clearInterval(_timerInterval);_timerInterval=null;}
+  syncScore();
+  const players=Object.entries(room.players||{})
+    .map(([uid,p])=>({...p,uid})).sort((a,b)=>b.score-a.score);
+  const w=players[0];
+  document.getElementById('winnerName').textContent=
+    w?`${MEDALS[0]} ${escHtml(w.name)} — ${(w.score||0).toLocaleString()} pops`:'—';
+  document.getElementById('resultsList').innerHTML=players.map((p,i)=>
+    `<li class="${i===0?'winner-row':''}">
+      <span class="r-rank">${MEDALS[i]??i+1}</span>
+      <span class="r-name">${escHtml(p.name)}${p.uid===_uid?' <em style="opacity:.5;font-style:normal">(you)</em>':''}</span>
+      <span class="r-score">${(p.score||0).toLocaleString()}</span>
+    </li>`
+  ).join('');
+  showScreen('resultsScreen');
+}
+
+async function playAgainSameRoom(){
+  if(!window._fb||!_roomId){showScreen('lobbyScreen');fbReady(initLobby);return;}
+  const {db,ref,get,update}=fb();
+  const snap=await get(ref(db,'rooms/'+_roomId));
+  if(!snap.exists()){showScreen('lobbyScreen');fbReady(initLobby);return;}
+  const room=snap.val();
+  const reset={status:'waiting',startedAt:null,endAt:null};
+  for(const uid of Object.keys(room.players||{})) reset[`players/${uid}/score`]=0;
+  await update(ref(db,'rooms/'+_roomId),reset);
+  enterWaiting(_roomId);
+}
+window.playAgainSameRoom=playAgainSameRoom;
+
+async function leaveRoom(){
+  if(window._fb&&_roomId){
+    const {db,ref,remove,get}=fb();
+    await remove(ref(db,`rooms/${_roomId}/players/${_uid}`));
+    const s=await get(ref(db,`rooms/${_roomId}/players`));
+    if(!s.exists()) await remove(ref(db,'rooms/'+_roomId));
+  }
+  _roomId=null;_roomData=null;_isHost=false;
+  if(_timerInterval){clearInterval(_timerInterval);_timerInterval=null;}
+  showScreen('lobbyScreen');
+  fbReady(initLobby);
+}
+window.leaveRoom=leaveRoom;
+
+// ── MILESTONE ─────────────────────────────────────────────────
+function showMilestone(msg){
+  const el=document.getElementById('milestoneMsg');
+  el.textContent=msg; el.classList.remove('show');
+  void el.offsetWidth; el.classList.add('show');
+}
 </script>
 </body>
 </html>
